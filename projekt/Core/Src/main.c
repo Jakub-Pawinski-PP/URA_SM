@@ -19,17 +19,25 @@
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
 #include "adc.h"
+#include "dac.h"
 #include "tim.h"
 #include "usart.h"
 #include "gpio.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-#include <stdio.h>
+#include "stdio.h"
+#include "arm_math.h"
+#include <stdlib.h>
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
 /* USER CODE BEGIN PTD */
+
+#define PID_TS         0.1
+#define PID_KP1        0.15
+#define PID_KI1        0.35
+#define PID_KD1        0.01
 
 /* USER CODE END PTD */
 
@@ -45,15 +53,31 @@
 /* Private variables ---------------------------------------------------------*/
 
 /* USER CODE BEGIN PV */
-// ADC constants
-	const uint32_t ADC_REG_MAX = 0xfff; //12-bits
-	const float ADC_VOLTAGE_MAX = 3.3; //[V]
-	const uint32_t ADC_TIMEOUT = 100; //[as]
-	//ADC conversion result
-	uint32_t ADC_measurement = 0; //ADC register value
-	float ADC_voltage = 0;
-	float ADC_voltage_out = 0;
-	uint32_t ADC_voltage_mV = 0;
+
+
+uint16_t sygnal_pomiarowy;
+
+int16_t PWM = 0;
+int16_t uchyb = 0;
+float PWM_float = 0;
+char sygnal_sterujacy_send[4];
+
+arm_pid_instance_f32 PID_regulator;
+
+uint32_t sendTime=0;
+
+int16_t sygnal_sterujacy;
+
+char send_line_usart[100];
+
+const uint32_t ADC_REG_MAX = 0xfff;
+const float ADC_VOLTAGE_MAX = 3.3;
+const uint32_t ADC_TIMEOUT = 100;
+
+uint32_t ADC_measur = 0;
+float ADC_measur_V;
+uint32_t ADC_measur_mV = 0;
+_Bool LCD_update=0;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -64,29 +88,78 @@ void SystemClock_Config(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-char rcv[4];
-int8_t Red;
+
+
+void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
+{
+
+	if (htim->Instance == TIM6)
+	{
+		if(!LCD_update)
+		{
+			HAL_ADC_Start(&hadc1);
+			HAL_ADC_PollForConversion(&hadc1, ADC_TIMEOUT);
+			ADC_measur = HAL_ADC_GetValue(&hadc1);
+			ADC_measur_V = ((float)ADC_measur/(float)ADC_REG_MAX) * ADC_VOLTAGE_MAX;
+			ADC_measur_mV = (uint32_t)(1000.0 * ADC_measur_V);
+			sygnal_pomiarowy = (uint16_t)ADC_measur_mV;
+		}
+
+		uchyb = (int16_t)(sygnal_sterujacy - sygnal_pomiarowy);
+
+		PWM_float = arm_pid_f32(&PID_regulator, uchyb);
+		PWM=(uint16_t)(PWM_float);
+		if(PWM_float>2000)
+		{
+			PWM=2000;
+			if(PID_regulator.state[2] > 2500)
+					PID_regulator.state[2] = 2500;
+		}
+		else if (PWM_float<0)
+		{
+			PWM=0;
+			PID_regulator.state[2] = 0;
+		}
+		if(PWM<=1000)
+		{
+			__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, PWM);
+			__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_2, 0);
+		}
+		else
+		{
+			__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, 1000);
+			__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_2, (PWM-1000));
+		}
+	}
+
+
+
+	if (htim->Instance == TIM7)
+	{
+		HAL_GPIO_TogglePin(LD2_GPIO_Port, LD2_Pin);
+		LCD_update=1;
+	}
+}
+
 
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 {
-		if(huart->Instance == USART3)
-		{
-			if(rcv[0] == 'R')
-			{
-				Red = atoi(&rcv[1]);
-				if(Red > 100)
-				{
-					Red = 100;
-				}
-				else if(Red < 0)
-				{
-					Red = 0;
-				}
-				__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, Red*10);
-			}
-		}
-		HAL_UART_Receive_IT(&huart3, (uint8_t*)rcv, 4);
+	HAL_GPIO_TogglePin(LD3_GPIO_Port, LD3_Pin);
+
+	if(huart->Instance == USART3)
+	{
+		sygnal_sterujacy = 1000*((int8_t)sygnal_sterujacy_send[0]-'0')+100*((int8_t)sygnal_sterujacy_send[1]-'0')+10*((int8_t)sygnal_sterujacy_send[2]-'0')+1*((int8_t)sygnal_sterujacy_send[3]-'0');
+
+			if(sygnal_sterujacy>3000)sygnal_sterujacy=3000;
+			else if(sygnal_sterujacy<0)sygnal_sterujacy=0;
+
+		HAL_UART_Receive_IT(&huart3,(uint8_t*)sygnal_sterujacy_send,4);
+
+	}
+
 }
+
+
 /* USER CODE END 0 */
 
 /**
@@ -117,34 +190,46 @@ int main(void)
 
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
-  MX_TIM3_Init();
-  MX_TIM4_Init();
   MX_USART3_UART_Init();
+  MX_DAC_Init();
+  MX_TIM3_Init();
   MX_ADC1_Init();
+  MX_TIM4_Init();
+  MX_TIM6_Init();
+  MX_TIM7_Init();
   /* USER CODE BEGIN 2 */
-  HAL_TIM_Base_Start_IT(&htim4);
+
+
   HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_1);
-  __HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, 0);
-  HAL_UART_Receive_IT(&huart3, (uint8_t*)rcv, 4);
+  HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_2);
+  HAL_UART_Receive_IT(&huart3,(uint8_t*)sygnal_sterujacy_send,4);
+
+  HAL_Delay(10);
+
+  PID_regulator.Kp = PID_KP1;
+  PID_regulator.Ki = PID_KI1 * PID_TS;
+  PID_regulator.Kd = PID_KD1 / PID_TS;
+
+  arm_pid_init_f32(&PID_regulator, 1);
+
+  HAL_TIM_Base_Start_IT(&htim6);
+
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
-   {
-  // Start AOC
-  HAL_ADC_Start(&hadc1);
-  //Read conversion result (rank 1)
-  HAL_ADC_PollForConversion(&hadc1,ADC_TIMEOUT);
-  ADC_measurement = HAL_ADC_GetValue(&hadc1);
-  ADC_voltage = ((float)ADC_measurement/(float)ADC_REG_MAX)*ADC_VOLTAGE_MAX;
-  ADC_voltage_out = ADC_VOLTAGE_MAX - ADC_voltage;
-  ADC_voltage_mV = (uint32_t)(1000.0*ADC_voltage);
-  HAL_Delay(10);
+  {
 
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
+
+
+	  		  uint8_t n = sprintf(send_line_usart, "Sygnal_sterujacy: %d; Sygnal_pomiarowy: %d; PWM: %d; \n\r", (uint16_t)sygnal_sterujacy, (uint16_t) sygnal_pomiarowy, (uint16_t)  PWM);
+	  		  HAL_UART_Transmit(&huart3,(uint8_t*)send_line_usart,n,100);
+
+	 	  HAL_Delay(1000);
   }
   /* USER CODE END 3 */
 }
