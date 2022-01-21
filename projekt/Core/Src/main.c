@@ -18,14 +18,14 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
-#include "dac.h"
+#include "adc.h"
 #include "tim.h"
 #include "usart.h"
 #include "gpio.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+#include <stdio.h>
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -45,7 +45,15 @@
 /* Private variables ---------------------------------------------------------*/
 
 /* USER CODE BEGIN PV */
-
+// ADC constants
+	const uint32_t ADC_REG_MAX = 0xfff; //12-bits
+	const float ADC_VOLTAGE_MAX = 3.3; //[V]
+	const uint32_t ADC_TIMEOUT = 100; //[as]
+	//ADC conversion result
+	uint32_t ADC_measurement = 0; //ADC register value
+	float ADC_voltage = 0;
+	float ADC_voltage_out = 0;
+	uint32_t ADC_voltage_mV = 0;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -109,10 +117,10 @@ int main(void)
 
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
-  MX_DAC_Init();
   MX_TIM3_Init();
   MX_TIM4_Init();
   MX_USART3_UART_Init();
+  MX_ADC1_Init();
   /* USER CODE BEGIN 2 */
   HAL_TIM_Base_Start_IT(&htim4);
   HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_1);
@@ -123,7 +131,17 @@ int main(void)
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
-  {
+   {
+  // Start AOC
+  HAL_ADC_Start(&hadc1);
+  //Read conversion result (rank 1)
+  HAL_ADC_PollForConversion(&hadc1,ADC_TIMEOUT);
+  ADC_measurement = HAL_ADC_GetValue(&hadc1);
+  ADC_voltage = ((float)ADC_measurement/(float)ADC_REG_MAX)*ADC_VOLTAGE_MAX;
+  ADC_voltage_out = ADC_VOLTAGE_MAX - ADC_voltage;
+  ADC_voltage_mV = (uint32_t)(1000.0*ADC_voltage);
+  HAL_Delay(10);
+
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
