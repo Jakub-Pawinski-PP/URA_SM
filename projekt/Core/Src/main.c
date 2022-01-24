@@ -33,12 +33,10 @@
 
 /* Private typedef -----------------------------------------------------------*/
 /* USER CODE BEGIN PTD */
-
 #define PID_TS         0.1
 #define PID_KP1        0.15
 #define PID_KI1        0.35
-#define PID_KD1        0.01
-
+#define PID_KD1        0.00
 /* USER CODE END PTD */
 
 /* Private define ------------------------------------------------------------*/
@@ -53,8 +51,6 @@
 /* Private variables ---------------------------------------------------------*/
 
 /* USER CODE BEGIN PV */
-
-
 uint16_t sygnal_pomiarowy;
 
 int16_t PWM = 0;
@@ -64,7 +60,7 @@ char sygnal_sterujacy_send[4];
 
 arm_pid_instance_f32 PID_regulator;
 
-uint32_t sendTime=0;
+uint32_t sendTime = 0;
 
 int16_t sygnal_sterujacy;
 
@@ -74,22 +70,31 @@ const uint32_t ADC_REG_MAX = 0xfff;
 const float ADC_VOLTAGE_MAX = 3.3;
 const uint32_t ADC_TIMEOUT = 100;
 
-uint32_t ADC_measur = 0;
-float ADC_measur_V;
-uint32_t ADC_measur_mV = 0;
-_Bool LCD_update=0;
+uint32_t ADC_measure = 0;
+float ADC_measure_V;
+uint32_t ADC_measure_mV = 0;
+_Bool LCD_update = 0;
+
+uint16_t enco_abs = 0;
+int16_t enco = 0;
+int16_t res = 0;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 /* USER CODE BEGIN PFP */
+void TIM_ResetCounter(TIM_TypeDef* TIMx)
+{
+  /* Check the parameters */
+  assert_param(IS_TIM_ALL_PERIPH(TIMx));
 
+  /* Reset the Counter Register value */
+  TIMx->CNT = 0;
+}
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-
-
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 {
 
@@ -99,28 +104,31 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 		{
 			HAL_ADC_Start(&hadc1);
 			HAL_ADC_PollForConversion(&hadc1, ADC_TIMEOUT);
-			ADC_measur = HAL_ADC_GetValue(&hadc1);
-			ADC_measur_V = ((float)ADC_measur/(float)ADC_REG_MAX) * ADC_VOLTAGE_MAX;
-			ADC_measur_mV = (uint32_t)(1000.0 * ADC_measur_V);
-			sygnal_pomiarowy = (uint16_t)ADC_measur_mV;
+			ADC_measure = HAL_ADC_GetValue(&hadc1);
+			ADC_measure_V = ((float)ADC_measure/(float)ADC_REG_MAX) * ADC_VOLTAGE_MAX;
+			ADC_measure_mV = (uint32_t)(1000.0 * ADC_measure_V);
+			sygnal_pomiarowy = (uint16_t)ADC_measure_mV;
 		}
 
 		uchyb = (int16_t)(sygnal_sterujacy - sygnal_pomiarowy);
 
 		PWM_float = arm_pid_f32(&PID_regulator, uchyb);
-		PWM=(uint16_t)(PWM_float);
-		if(PWM_float>2000)
+		PWM = (uint16_t)(PWM_float);
+
+		if(PWM_float > 2000)
 		{
-			PWM=2000;
-			if(PID_regulator.state[2] > 2500)
-					PID_regulator.state[2] = 2500;
+			PWM = 2000;
+			if(PID_regulator.state[2] > 2000)
+					{
+						PID_regulator.state[2] = 2000;
+					}
 		}
-		else if (PWM_float<0)
+		else if (PWM_float < 0)
 		{
-			PWM=0;
+			PWM = 0;
 			PID_regulator.state[2] = 0;
 		}
-		if(PWM<=1000)
+		if(PWM <= 1000)
 		{
 			__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, PWM);
 			__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_2, 0);
@@ -128,7 +136,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 		else
 		{
 			__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, 1000);
-			__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_2, (PWM-1000));
+			__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_2, (PWM - 1000));
 		}
 	}
 
@@ -137,7 +145,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 	if (htim->Instance == TIM7)
 	{
 		HAL_GPIO_TogglePin(LD2_GPIO_Port, LD2_Pin);
-		LCD_update=1;
+		LCD_update = 1;
 	}
 }
 
@@ -150,16 +158,20 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 	{
 		sygnal_sterujacy = 1000*((int8_t)sygnal_sterujacy_send[0]-'0')+100*((int8_t)sygnal_sterujacy_send[1]-'0')+10*((int8_t)sygnal_sterujacy_send[2]-'0')+1*((int8_t)sygnal_sterujacy_send[3]-'0');
 
-			if(sygnal_sterujacy>3000)sygnal_sterujacy=3000;
-			else if(sygnal_sterujacy<0)sygnal_sterujacy=0;
+			if(sygnal_sterujacy > 2700)
+			{
+				sygnal_sterujacy = 2700;
+			}
+			else if(sygnal_sterujacy < 2000)
+			{
+				sygnal_sterujacy = 2000;
+			}
 
-		HAL_UART_Receive_IT(&huart3,(uint8_t*)sygnal_sterujacy_send,4);
+		HAL_UART_Receive_IT(&huart3, (uint8_t*)sygnal_sterujacy_send, 4);
 
 	}
 
 }
-
-
 /* USER CODE END 0 */
 
 /**
@@ -198,11 +210,10 @@ int main(void)
   MX_TIM6_Init();
   MX_TIM7_Init();
   /* USER CODE BEGIN 2 */
-
-
   HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_1);
   HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_2);
-  HAL_UART_Receive_IT(&huart3,(uint8_t*)sygnal_sterujacy_send,4);
+  HAL_TIM_Encoder_Start_IT(&htim4, TIM_CHANNEL_ALL);
+  HAL_UART_Receive_IT(&huart3, (uint8_t*)sygnal_sterujacy_send, 4);
 
   HAL_Delay(10);
 
@@ -213,7 +224,6 @@ int main(void)
   arm_pid_init_f32(&PID_regulator, 1);
 
   HAL_TIM_Base_Start_IT(&htim6);
-
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -225,9 +235,22 @@ int main(void)
 
     /* USER CODE BEGIN 3 */
 
+	  	  	  enco_abs = __HAL_TIM_GET_COUNTER(&htim4) / 4;
+	  	  	  if(enco_abs > 0 && enco_abs < 1000)
+	  	  	  {
+	  	  		  enco = enco_abs;
+	  	  	  }
+	  	  	  else if(enco_abs <= 16384 && enco_abs > 15000)
+	  	  	  {
+	  	  		  enco = -(16384 - enco_abs);
+	  	  	  }
+	  	  	  sygnal_sterujacy = sygnal_sterujacy + enco;
+	  	  	  TIM_ResetCounter(TIM4);
+	  	  	  enco_abs = 0;
+	  	  	  enco = 0;
 
-	  		  uint8_t n = sprintf(send_line_usart, "Sygnal_sterujacy: %d; Sygnal_pomiarowy: %d; PWM: %d; \n\r", (uint16_t)sygnal_sterujacy, (uint16_t) sygnal_pomiarowy, (uint16_t)  PWM);
-	  		  HAL_UART_Transmit(&huart3,(uint8_t*)send_line_usart,n,100);
+	  		  uint8_t n = sprintf(send_line_usart, "Sygnal_sterujacy: %d; Sygnal_pomiarowy: %d; PWM: %d; \n\r", (uint16_t)sygnal_sterujacy, (uint16_t)sygnal_pomiarowy, (uint16_t)PWM);
+	  		  HAL_UART_Transmit(&huart3, (uint8_t*)send_line_usart, n, 100);
 
 	 	  HAL_Delay(1000);
   }
