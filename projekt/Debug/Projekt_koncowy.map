@@ -448,7 +448,6 @@ Discarded input sections
                 0x0000000000000000        0x4 ./Core/Src/main.o
  .rodata.ADC_TIMEOUT
                 0x0000000000000000        0x4 ./Core/Src/main.o
- .bss.res       0x0000000000000000        0x2 ./Core/Src/main.o
  .debug_macro   0x0000000000000000      0xaa8 ./Core/Src/main.o
  .debug_macro   0x0000000000000000      0x299 ./Core/Src/main.o
  .debug_macro   0x0000000000000000       0x2e ./Core/Src/main.o
@@ -5827,31 +5826,31 @@ LOAD c:/st/stm32cubeide_1.7.0/stm32cubeide/plugins/com.st.stm32cube.ide.mcu.exte
 LOAD c:/st/stm32cubeide_1.7.0/stm32cubeide/plugins/com.st.stm32cube.ide.mcu.externaltools.gnu-tools-for-stm32.9-2020-q2-update.win32_2.0.0.202105311346/tools/bin/../lib/gcc/arm-none-eabi/9.3.1/../../../../arm-none-eabi/lib/thumb/v7e-m+fp/hard\libm.a
 LOAD c:/st/stm32cubeide_1.7.0/stm32cubeide/plugins/com.st.stm32cube.ide.mcu.externaltools.gnu-tools-for-stm32.9-2020-q2-update.win32_2.0.0.202105311346/tools/bin/../lib/gcc/arm-none-eabi/9.3.1/thumb/v7e-m+fp/hard\libgcc.a
 
-.debug_info     0x0000000000000000    0x1756f
+.debug_info     0x0000000000000000    0x1755d
  .debug_info    0x0000000000000000      0xd3d ./Core/Src/adc.o
  .debug_info    0x0000000000000d3d      0x576 ./Core/Src/gpio.o
- .debug_info    0x00000000000012b3     0x1eac ./Core/Src/main.o
- .debug_info    0x000000000000315f      0x3be ./Core/Src/stm32f7xx_hal_msp.o
- .debug_info    0x000000000000351d      0xe6f ./Core/Src/stm32f7xx_it.o
- .debug_info    0x000000000000438c      0xfa8 ./Core/Src/syscalls.o
- .debug_info    0x0000000000005334      0xa25 ./Core/Src/sysmem.o
- .debug_info    0x0000000000005d59      0x7ad ./Core/Src/system_stm32f7xx.o
- .debug_info    0x0000000000006506     0x118f ./Core/Src/tim.o
- .debug_info    0x0000000000007695      0xfc1 ./Core/Src/usart.o
- .debug_info    0x0000000000008656       0x22 ./Core/Startup/startup_stm32f746zgtx.o
- .debug_info    0x0000000000008678      0xa42 ./Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal.o
- .debug_info    0x00000000000090ba      0xd86 ./Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_adc.o
- .debug_info    0x0000000000009e40      0xbae ./Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_adc_ex.o
- .debug_info    0x000000000000a9ee     0x1116 ./Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_cortex.o
- .debug_info    0x000000000000bb04      0x9f1 ./Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_dma.o
- .debug_info    0x000000000000c4f5      0x868 ./Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_gpio.o
- .debug_info    0x000000000000cd5d      0xa4c ./Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_pwr.o
- .debug_info    0x000000000000d7a9      0x9cc ./Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_rcc.o
- .debug_info    0x000000000000e175      0x82c ./Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_rcc_ex.o
- .debug_info    0x000000000000e9a1     0x2d3e ./Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_tim.o
- .debug_info    0x00000000000116df     0x1688 ./Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_tim_ex.o
- .debug_info    0x0000000000012d67     0x3cd4 ./Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_uart.o
- .debug_info    0x0000000000016a3b      0xb34 C:\Users\jakub\STM32Cube\Repository\Packs\ARM\CMSIS\5.6.0\CMSIS\DSP\Lib\GCC\libarm_cortexM7lfsp_math.a(arm_pid_init_f32.o)
+ .debug_info    0x00000000000012b3     0x1e9a ./Core/Src/main.o
+ .debug_info    0x000000000000314d      0x3be ./Core/Src/stm32f7xx_hal_msp.o
+ .debug_info    0x000000000000350b      0xe6f ./Core/Src/stm32f7xx_it.o
+ .debug_info    0x000000000000437a      0xfa8 ./Core/Src/syscalls.o
+ .debug_info    0x0000000000005322      0xa25 ./Core/Src/sysmem.o
+ .debug_info    0x0000000000005d47      0x7ad ./Core/Src/system_stm32f7xx.o
+ .debug_info    0x00000000000064f4     0x118f ./Core/Src/tim.o
+ .debug_info    0x0000000000007683      0xfc1 ./Core/Src/usart.o
+ .debug_info    0x0000000000008644       0x22 ./Core/Startup/startup_stm32f746zgtx.o
+ .debug_info    0x0000000000008666      0xa42 ./Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal.o
+ .debug_info    0x00000000000090a8      0xd86 ./Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_adc.o
+ .debug_info    0x0000000000009e2e      0xbae ./Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_adc_ex.o
+ .debug_info    0x000000000000a9dc     0x1116 ./Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_cortex.o
+ .debug_info    0x000000000000baf2      0x9f1 ./Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_dma.o
+ .debug_info    0x000000000000c4e3      0x868 ./Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_gpio.o
+ .debug_info    0x000000000000cd4b      0xa4c ./Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_pwr.o
+ .debug_info    0x000000000000d797      0x9cc ./Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_rcc.o
+ .debug_info    0x000000000000e163      0x82c ./Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_rcc_ex.o
+ .debug_info    0x000000000000e98f     0x2d3e ./Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_tim.o
+ .debug_info    0x00000000000116cd     0x1688 ./Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_tim_ex.o
+ .debug_info    0x0000000000012d55     0x3cd4 ./Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_uart.o
+ .debug_info    0x0000000000016a29      0xb34 C:\Users\jakub\STM32Cube\Repository\Packs\ARM\CMSIS\5.6.0\CMSIS\DSP\Lib\GCC\libarm_cortexM7lfsp_math.a(arm_pid_init_f32.o)
 
 .debug_abbrev   0x0000000000000000     0x303d
  .debug_abbrev  0x0000000000000000      0x1c4 ./Core/Src/adc.o

@@ -32,10 +32,13 @@
 
 /* Private typedef -----------------------------------------------------------*/
 /* USER CODE BEGIN PTD */
+
+//parametry regulatora
 #define PID_TS         0.1
 #define PID_KP1        0.15
 #define PID_KI1        0.35
 #define PID_KD1        0.00
+
 /* USER CODE END PTD */
 
 /* Private define ------------------------------------------------------------*/
@@ -50,6 +53,10 @@
 /* Private variables ---------------------------------------------------------*/
 
 /* USER CODE BEGIN PV */
+
+//inicjalizacje zmiennych
+
+//sygnaly i regulator
 uint16_t sygnal_pomiarowy;
 
 int16_t PWM = 0;
@@ -63,8 +70,10 @@ uint32_t sendTime = 0;
 
 int16_t sygnal_sterujacy;
 
+//komunikacja szeregowa
 char send_line_usart[100];
 
+//przetwornik ADC
 const uint32_t ADC_REG_MAX = 0xfff;
 const float ADC_VOLTAGE_MAX = 3.3;
 const uint32_t ADC_TIMEOUT = 100;
@@ -74,14 +83,16 @@ float ADC_measure_V;
 uint32_t ADC_measure_mV = 0;
 _Bool LCD_update = 0;
 
+//enkoder
 uint16_t enco_abs = 0;
 int16_t enco = 0;
-int16_t res = 0;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 /* USER CODE BEGIN PFP */
+
+//reset countera od enkodera
 void TIM_ResetCounter(TIM_TypeDef* TIMx)
 {
   /* Check the parameters */
@@ -101,6 +112,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 	{
 		if(!LCD_update)
 		{
+			//pomiar napiecia na dzielniku
 			HAL_ADC_Start(&hadc1);
 			HAL_ADC_PollForConversion(&hadc1, ADC_TIMEOUT);
 			ADC_measure = HAL_ADC_GetValue(&hadc1);
@@ -109,6 +121,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 			sygnal_pomiarowy = (uint16_t)ADC_measure_mV;
 		}
 
+		//uchyb i moc PWM
 		uchyb = (int16_t)(sygnal_sterujacy - sygnal_pomiarowy);
 
 		PWM_float = arm_pid_f32(&PID_regulator, uchyb);
@@ -127,6 +140,8 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 			PWM = 0;
 			PID_regulator.state[2] = 0;
 		}
+
+		//przypisanie % PWM do odpowiednich kanalow
 		if(PWM <= 1000)
 		{
 			__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, PWM);
@@ -151,12 +166,14 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 {
+	//potwierdzenie wyslania danych
 	HAL_GPIO_TogglePin(LD3_GPIO_Port, LD3_Pin);
 
 	if(huart->Instance == USART3)
 	{
 		sygnal_sterujacy = 1000*((int8_t)sygnal_sterujacy_send[0]-'0')+100*((int8_t)sygnal_sterujacy_send[1]-'0')+10*((int8_t)sygnal_sterujacy_send[2]-'0')+1*((int8_t)sygnal_sterujacy_send[3]-'0');
 
+		//ograniczenie sygnalu sterujacego w bezpiecznym zakresie
 			if(sygnal_sterujacy > 2700)
 			{
 				sygnal_sterujacy = 2700;
@@ -166,6 +183,7 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 				sygnal_sterujacy = 1600;
 			}
 
+		//ustawienie wartosci sygnalu sterujacego w porcie szeregowym
 		HAL_UART_Receive_IT(&huart3, (uint8_t*)sygnal_sterujacy_send, 4);
 
 	}
@@ -208,13 +226,17 @@ int main(void)
   MX_TIM6_Init();
   MX_TIM7_Init();
   /* USER CODE BEGIN 2 */
+
+  //inicjalizacje kanalow PWM, enkodera i USART
   HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_1);
   HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_2);
   HAL_TIM_Encoder_Start_IT(&htim4, TIM_CHANNEL_ALL);
   HAL_UART_Receive_IT(&huart3, (uint8_t*)sygnal_sterujacy_send, 4);
 
+  //opoznienie - probkowanie
   HAL_Delay(10);
 
+  //parametry regulatora oraz inicjalizacja
   PID_regulator.Kp = PID_KP1;
   PID_regulator.Ki = PID_KI1 * PID_TS;
   PID_regulator.Kd = PID_KD1 / PID_TS;
@@ -233,7 +255,10 @@ int main(void)
 
     /* USER CODE BEGIN 3 */
 
+	  	  	  //odczyt stanu enkodera
 	  	  	  enco_abs = __HAL_TIM_GET_COUNTER(&htim4) / 4;
+
+	  	  	  //ustawienie zakresu pracy enkodera
 	  	  	  if(enco_abs > 0 && enco_abs < 1000)
 	  	  	  {
 	  	  		  enco = enco_abs;
@@ -242,8 +267,11 @@ int main(void)
 	  	  	  {
 	  	  		  enco = -(16384 - enco_abs);
 	  	  	  }
+
+	  	  	  //zmiana wartosci sygnalu sterujacego za pomoca enkodera
 	  	  	  sygnal_sterujacy = sygnal_sterujacy + enco;
 
+	  	  	  //ograniczenie sygnalu sterujacego, gdy jest zmieniany z uzyciem enkodera
 	  	  	  if(sygnal_sterujacy > 2700)
 	  	  				{
 	  	  					sygnal_sterujacy = 2700;
@@ -253,13 +281,16 @@ int main(void)
 	  	  					sygnal_sterujacy = 1600;
 	  	  				}
 
+	  	  	  //reset stanu enkodera
 	  	  	  TIM_ResetCounter(TIM4);
 	  	  	  enco_abs = 0;
 	  	  	  enco = 0;
 
+	  	  	  //odczyt wartosci sygnalow w porcie szeregowym
 	  		  uint8_t n = sprintf(send_line_usart, "Sygnal_sterujacy: %d; Sygnal_pomiarowy: %d; PWM: %d; \n\r", (uint16_t)sygnal_sterujacy, (uint16_t)sygnal_pomiarowy, (uint16_t)PWM);
 	  		  HAL_UART_Transmit(&huart3, (uint8_t*)send_line_usart, n, 100);
 
+	  	  //opoznienie odczytu danych
 	 	  HAL_Delay(1000);
   }
   /* USER CODE END 3 */
