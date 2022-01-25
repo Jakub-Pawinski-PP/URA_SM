@@ -19,7 +19,6 @@
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
 #include "adc.h"
-#include "dac.h"
 #include "tim.h"
 #include "usart.h"
 #include "gpio.h"
@@ -162,9 +161,9 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 			{
 				sygnal_sterujacy = 2700;
 			}
-			else if(sygnal_sterujacy < 2000)
+			else if(sygnal_sterujacy < 1600)
 			{
-				sygnal_sterujacy = 2000;
+				sygnal_sterujacy = 1600;
 			}
 
 		HAL_UART_Receive_IT(&huart3, (uint8_t*)sygnal_sterujacy_send, 4);
@@ -203,7 +202,6 @@ int main(void)
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
   MX_USART3_UART_Init();
-  MX_DAC_Init();
   MX_TIM3_Init();
   MX_ADC1_Init();
   MX_TIM4_Init();
@@ -245,6 +243,16 @@ int main(void)
 	  	  		  enco = -(16384 - enco_abs);
 	  	  	  }
 	  	  	  sygnal_sterujacy = sygnal_sterujacy + enco;
+
+	  	  	  if(sygnal_sterujacy > 2700)
+	  	  				{
+	  	  					sygnal_sterujacy = 2700;
+	  	  				}
+	  	  				else if(sygnal_sterujacy < 1600)
+	  	  				{
+	  	  					sygnal_sterujacy = 1600;
+	  	  				}
+
 	  	  	  TIM_ResetCounter(TIM4);
 	  	  	  enco_abs = 0;
 	  	  	  enco = 0;
