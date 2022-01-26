@@ -19,12 +19,15 @@
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
 #include "adc.h"
+#include "i2c.h"
 #include "tim.h"
 #include "usart.h"
 #include "gpio.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+#include "LCD_i2c_config.h"
+#include "LCD_i2c.h"
 #include "stdio.h"
 #include "arm_math.h"
 #include <stdlib.h>
@@ -66,11 +69,10 @@ char sygnal_sterujacy_send[4];
 
 arm_pid_instance_f32 PID_regulator;
 
-uint32_t sendTime = 0;
-
 int16_t sygnal_sterujacy;
 
-//komunikacja szeregowa
+//komunikacja szeregowa i ekran LCD
+char send_line[26];
 char send_line_usart[100];
 
 //przetwornik ADC
@@ -127,6 +129,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 		PWM_float = arm_pid_f32(&PID_regulator, uchyb);
 		PWM = (uint16_t)(PWM_float);
 
+		//anti-windup
 		if(PWM_float > 2000)
 		{
 			PWM = 2000;
@@ -225,6 +228,7 @@ int main(void)
   MX_TIM4_Init();
   MX_TIM6_Init();
   MX_TIM7_Init();
+  MX_I2C1_Init();
   /* USER CODE BEGIN 2 */
 
   //inicjalizacje kanalow PWM, enkodera i USART
@@ -233,8 +237,9 @@ int main(void)
   HAL_TIM_Encoder_Start_IT(&htim4, TIM_CHANNEL_ALL);
   HAL_UART_Receive_IT(&huart3, (uint8_t*)sygnal_sterujacy_send, 4);
 
-  //opoznienie - probkowanie
+  lcd_init(&hLCD_1);
   HAL_Delay(10);
+  lcd_send_cmd(&hLCD_1, LCD_DISPLAY_ON_OFF_CONTROL | LCD_OPT_D);
 
   //parametry regulatora oraz inicjalizacja
   PID_regulator.Kp = PID_KP1;
@@ -244,6 +249,7 @@ int main(void)
   arm_pid_init_f32(&PID_regulator, 1);
 
   HAL_TIM_Base_Start_IT(&htim6);
+  HAL_TIM_Base_Start_IT(&htim7);
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -286,9 +292,21 @@ int main(void)
 	  	  	  enco_abs = 0;
 	  	  	  enco = 0;
 
-	  	  	  //odczyt wartosci sygnalow w porcie szeregowym
-	  		  uint8_t n = sprintf(send_line_usart, "Sygnal_sterujacy: %d; Sygnal_pomiarowy: %d; PWM: %d; \n\r", (uint16_t)sygnal_sterujacy, (uint16_t)sygnal_pomiarowy, (uint16_t)PWM);
-	  		  HAL_UART_Transmit(&huart3, (uint8_t*)send_line_usart, n, 100);
+	  		if(LCD_update)
+	  			  {
+	  				  //odczyt wartosci sygnalow na ekranie LCD
+	  				  sprintf(send_line, "Set: mV:  PWM:");
+	  				  lcd_clear(&hLCD_1);
+	  				  lcd_send_string (&hLCD_1, send_line, 0, 0);
+	  				  HAL_Delay(2);
+	  				  sprintf(send_line, "%d %d %d", (uint16_t)sygnal_sterujacy, (uint16_t)sygnal_pomiarowy, (uint16_t)PWM);
+	  				  lcd_send_string (&hLCD_1, send_line, 1, 0);
+
+	  				  //odczyt wartosci sygnalow w porcie szeregowym
+	  		  		  uint8_t n = sprintf(send_line_usart, "Sygnal_sterujacy: %d; Sygnal_pomiarowy: %d; PWM: %d; \n\r", (uint16_t)sygnal_sterujacy, (uint16_t)sygnal_pomiarowy, (uint16_t)PWM);
+	  		  		  HAL_UART_Transmit(&huart3, (uint8_t*)send_line_usart, n, 100);
+	  				  LCD_update = 0;
+	  			  }
 
 	  	  //opoznienie odczytu danych
 	 	  HAL_Delay(1000);
